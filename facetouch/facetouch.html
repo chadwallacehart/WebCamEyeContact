@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Face Touch Detection</title>
+    <!-- Load the latest version of TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+</head>
+
+<body>
+<div id="console">Remember to allow your camera first</div>
+<!-- Add an image that we will use to test -->
+<video autoplay playsinline muted id="webcam" width="224" height="224"></video>
+<button id="class-a">No touch</button>
+<button id="class-b">Touch Face</button>
+<span id="message"></span>
+<!-- Load index.js after the content of the page -->
+<script src="facetouch.js"></script>
+</body>
+
+</html>
