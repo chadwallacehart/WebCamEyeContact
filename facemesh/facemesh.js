@@ -52,6 +52,8 @@ function drawPath(ctx, points, closePath) {
     ctx.stroke(region);
 }
 
+
+// Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
 async function inference() {
 
 
@@ -60,6 +62,7 @@ async function inference() {
     // stream, a single prediction per frame will be returned.
     const predictions = await model.estimateFaces({
         input: document.querySelector("video"),
+        returnTensors: false,
         flipHorizontal: false, // done in CSS
         predictIrises: true
     });
@@ -146,7 +149,7 @@ video.addEventListener('loadedmetadata', async (event) => {
     // Load the MediaPipe Facemesh package.
     await tf.setBackend('webgl');
     model = await faceLandmarksDetection.load(
-        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh);
+        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
 
     console.log("facemesh loaded");
     canvas.style.display = "visible";
@@ -155,5 +158,5 @@ video.addEventListener('loadedmetadata', async (event) => {
 
 captureButton.addEventListener("click", () => {
     points.innerText = `Points captured: ${data[0].mesh.length}`;
-    console.log(data);
+    console.log(data[0]);
 });
