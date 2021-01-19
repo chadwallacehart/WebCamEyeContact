@@ -8,17 +8,25 @@ import {TRIANGULATION} from './triangulation';
 
 
 const video = document.querySelector('video');
-const captureButton = document.getElementById("capture");
-const points = document.getElementById("points");
+const correctBtn = document.getElementById("correct");
+const incorrectBtn = document.getElementById("incorrect");
+
+const samplesText = document.getElementById("samples");
+const probabilityText = document.getElementById("probability");
+
 
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 const NUM_KEYPOINTS = 468;
 const GREEN = '#32EEDB';
 
+const classifier = knnClassifier.create();
+let model, webcam, samples = 0;
+const SAMPLESPERRCLICK = 10;
 
-let model, data;
+let showResults = false;
 
+/*
 async function gum() {
 
     navigator.mediaDevices.getUserMedia({video: true})
@@ -51,27 +59,97 @@ function drawPath(ctx, points, closePath) {
     }
     ctx.stroke(region);
 }
+*/
 
+async function addExample(classId) {
+    showResults = false;
+    //const webcam = await tf.data.webcam(video);
+
+    try {
+        for (let x = 0; x < SAMPLESPERRCLICK; x++) {
+            // Capture an image from the web camera.
+            const img = await webcam.capture();
+
+            const predictions = await model.estimateFaces({
+                input: img,
+                returnTensors: true,
+                flipHorizontal: false, // done in CSS
+                predictIrises: true
+            });
+
+            img.dispose();
+
+
+            // const predictionTensor = tf.tensor(predictions[0].scaledMesh);
+            // const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
+
+            // Pass the intermediate activation to the classifier.
+            classifier.addExample(predictions[0].scaledMesh, classId);
+
+            // Dispose the tensor to release the memory.
+            img.dispose();
+
+            // Add some time between images so there is more variance
+            setTimeout(() => {
+                //console.log(`Added image ${x}`);
+                // if (x === 49)
+                //    console.log(predictions[0].scaledMesh);
+            }, 100)
+        }
+
+        console.log(`Added ${SAMPLESPERRCLICK} samples`);
+        samples += SAMPLESPERRCLICK;
+
+        const correctSamples = classifier.getClassExampleCount()["correct"] || 0;
+        const incorrectSamples = classifier.getClassExampleCount()["incorrect"] || 0;
+
+        samplesText.innerText = `Samples - Correct: ${correctSamples}, Incorrect: ${incorrectSamples}`;
+
+        // const samples = Object.keys(classifier.getClassExampleCount()).reduce((a, c) => a + c);
+
+        inference();
+    } catch (err) {
+        console.error(err)
+    }
+
+}
 
 // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
 async function inference() {
+    showResults = true;
+
+    while (showResults) {
+
+        const img = await webcam.capture();
+
+        // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
+        // array of detected faces from the MediaPipe graph. If passing in a video
+        // stream, a single prediction per frame will be returned.
+        const predictions = await model.estimateFaces({
+            input: img,
+            returnTensors: false,
+            flipHorizontal: false, // done in CSS
+            predictIrises: true
+        });
+
+        img.dispose();
+
+        // console.log(predictions);
+
+        /*
+        // only works on first face
+        const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
 
 
-    // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
-    // array of detected faces from the MediaPipe graph. If passing in a video
-    // stream, a single prediction per frame will be returned.
-    const predictions = await model.estimateFaces({
-        input: document.querySelector("video"),
-        returnTensors: false,
-        flipHorizontal: false, // done in CSS
-        predictIrises: true
-    });
+        if (train !== null){
+            console.log(predictions[0].scaledMesh);
+            train = null;
+        }
 
-    // console.log(predictions);
+    */
+        if (predictions.length < 1)
+            continue;
 
-    data = predictions;
-
-    if (predictions.length > 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         //ctx.globalAlpha = 0.6;
@@ -133,18 +211,64 @@ async function inference() {
                 ctx.fill();
             }
 
-
         });
-    }
 
-    inference();
+
+            //const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
+            const predictionTensor = await tf.tensor(predictions[0].scaledMesh);
+
+            //console.log(predictionTensor);
+            // const samples = Object.keys(classifier.getClassExampleCount()).reduce((a, c) => a + c,0);
+            if (samples > 0) {
+                const result = await classifier.predictClass(predictionTensor);
+                // console.log("prediction: ", result);
+
+                const correctProbability = result.confidences["correct"] || 0;
+                const incorrectProbability = result.confidences["incorrect"] || 0;
+
+
+                probabilityText.innerText = `
+                correct: ${correctProbability.toFixed(2) * 100}%\n
+                incorrect: ${incorrectProbability.toFixed(2) * 100}%
+                `;
+
+
+                if (result.confidences[result.label] > 0.7) {
+                    if (result.label === "correct")
+                        document.body.style.backgroundColor = 'rgba(0,220,0, 0.5)';
+                    if (result.label === "incorrect")
+                        document.body.style.backgroundColor = 'rgba(220,0,0, 0.5)';
+                } else
+                    document.body.style.backgroundColor = 'rgba(220,220,220, 1)';
+
+
+            }
+
+    }
 
 
 }
 
+// try tf instead of direct gUM
+// gum();
 
-gum();
+async function app() {
+    webcam = await tf.data.webcam(video);
+    // Canvas results for displaying masks
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
+    await tf.setBackend('webgl');
+    model = await faceLandmarksDetection.load(
+        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
+
+    console.log("facemesh loaded");
+    canvas.style.display = "visible";
+    inference().catch(err => console.error(err))
+}
+
+
+/*
 video.addEventListener('loadedmetadata', async (event) => {
     // Load the MediaPipe Facemesh package.
     await tf.setBackend('webgl');
@@ -155,8 +279,29 @@ video.addEventListener('loadedmetadata', async (event) => {
     canvas.style.display = "visible";
     inference().catch(err => console.error(err));
 });
+ */
 
-captureButton.addEventListener("click", () => {
-    points.innerText = `Points captured: ${data[0].mesh.length}`;
-    console.log(data[0]);
+
+correctBtn.addEventListener("click", () => {
+    //message.innerText = `Correct`;
+    // document.body.style.backgroundColor = 'rgba(0,220,0, 0.5)';
+    try {
+        addExample("correct");
+        console.log("correct");
+    } catch (err) {
+        console.error(err)
+    }
 });
+
+incorrectBtn.addEventListener("click", () => {
+    //message.innerText = `Incorrect`;
+    //document.body.style.backgroundColor = 'rgba(220,0, 0, 0.5)';
+    try {
+        addExample("incorrect");
+        console.log("incorrect");
+    } catch (err) {
+        console.error(err)
+    }
+});
+
+app();

@@ -6,6 +6,12 @@ div {
     justify-content: center;
 }
 
+div.bottom {
+    margin-left: 45%;
+    position: fixed;
+    bottom: 0;
+}
+
 video {
     /* Mirror the local sourceVideo */
     transform: scale(-1, 1);            /*For Firefox (& IE) */
