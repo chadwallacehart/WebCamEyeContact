@@ -1,9 +1,17 @@
-div {
+div, span {
     text-align: center;
     align-items: center;
     margin: 0 auto;
     display: block;
     justify-content: center;
+}
+
+span {
+    font-size: large;
+}
+
+span#instructions {
+    font-weight: bold;
 }
 
 div.bottom {
@@ -16,13 +24,15 @@ video {
     /* Mirror the local sourceVideo */
     transform: scale(-1, 1);            /*For Firefox (& IE) */
     -webkit-transform: scale(-1, 1);     /*for Chrome & Opera (& Safari) */
-    width: auto;
-    height: auto;
+    /*width: 640px;
+    height: 360px;*/
 }
 
 canvas {
     z-index:0;
     transform: scale(-1, 1);            /*For Firefox (& IE) */
     -webkit-transform: scale(-1, 1);     /*for Chrome & Opera (& Safari) */
+    /*width: 640px;
+    height: 360px;*/
 
 }

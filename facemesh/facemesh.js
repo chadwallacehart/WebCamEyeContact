@@ -10,7 +10,9 @@ import {TRIANGULATION} from './triangulation';
 const video = document.querySelector('video');
 const correctBtn = document.getElementById("correct");
 const incorrectBtn = document.getElementById("incorrect");
+const startBtn = document.getElementById("start");
 
+const instructionText = document.getElementById("instructions");
 const samplesText = document.getElementById("samples");
 const probabilityText = document.getElementById("probability");
 
@@ -23,14 +25,16 @@ const GREEN = '#32EEDB';
 const classifier = knnClassifier.create();
 let model, webcam, samples = 0;
 const SAMPLESPERRCLICK = 10;
+const CANVAS_MULTIPLIER = 1;    // ToDo: compute this from the css size?
+
 
 let showResults = false;
 
-/*
-async function gum() {
 
-    navigator.mediaDevices.getUserMedia({video: true})
-        .then(function (mediaStream) {
+async function getCamera() {
+
+    await navigator.mediaDevices.getUserMedia({video: true})
+        .then( mediaStream=> {
             video.srcObject = mediaStream;
             video.onloadedmetadata = () => {
                 video.play();
@@ -38,6 +42,12 @@ async function gum() {
                 // Canvas results for displaying masks
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+
+                console.log(`video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                console.log(`canvas dimensions: ${canvas.width}x${canvas.height}`);
+
+                instructionText.innerText = "Now press start to enter full screen and begin training";
+
             };
         })
         .catch(function (err) {
@@ -46,6 +56,7 @@ async function gum() {
 
 }
 
+/*
 function drawPath(ctx, points, closePath) {
     const region = new Path2D();
     region.moveTo(points[0][0], points[0][1]);
@@ -68,16 +79,14 @@ async function addExample(classId) {
     try {
         for (let x = 0; x < SAMPLESPERRCLICK; x++) {
             // Capture an image from the web camera.
-            const img = await webcam.capture();
+            // const img = await webcam.capture();
 
             const predictions = await model.estimateFaces({
-                input: img,
+                input: video,
                 returnTensors: true,
                 flipHorizontal: false, // done in CSS
                 predictIrises: true
             });
-
-            img.dispose();
 
 
             // const predictionTensor = tf.tensor(predictions[0].scaledMesh);
@@ -85,10 +94,7 @@ async function addExample(classId) {
 
             // Pass the intermediate activation to the classifier.
             classifier.addExample(predictions[0].scaledMesh, classId);
-
-            // Dispose the tensor to release the memory.
-            img.dispose();
-
+            
             // Add some time between images so there is more variance
             setTimeout(() => {
                 //console.log(`Added image ${x}`);
@@ -120,19 +126,19 @@ async function inference() {
 
     while (showResults) {
 
-        const img = await webcam.capture();
+        //const img = await webcam.capture();
 
         // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
         // array of detected faces from the MediaPipe graph. If passing in a video
         // stream, a single prediction per frame will be returned.
         const predictions = await model.estimateFaces({
-            input: img,
+            input: video,
             returnTensors: false,
             flipHorizontal: false, // done in CSS
             predictIrises: true
         });
 
-        img.dispose();
+        //img.dispose();
 
         // console.log(predictions);
 
@@ -190,8 +196,8 @@ async function inference() {
             const keypoints = prediction.scaledMesh;
 
             for (let i = 0; i < NUM_KEYPOINTS; i++) {
-                const x = keypoints[i][0];
-                const y = keypoints[i][1];
+                const x = keypoints[i][0] * CANVAS_MULTIPLIER;
+                const y = keypoints[i][1] * CANVAS_MULTIPLIER;
 
                 ctx.fillStyle = 'rgb(0,0,0)';
                 ctx.beginPath();
@@ -202,12 +208,12 @@ async function inference() {
             const irises = prediction.annotations.rightEyeIris.concat(prediction.annotations.leftEyeIris);
 
             for (let i = 0; i < irises.length; i++) {
-                const x = irises[i][0];
-                const y = irises[i][1];
+                const x = irises[i][0] * CANVAS_MULTIPLIER;
+                const y = irises[i][1] * CANVAS_MULTIPLIER;
 
                 ctx.fillStyle = 'rgb(200,0,0)';
                 ctx.beginPath();
-                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.arc(x, y, 1, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
@@ -241,7 +247,6 @@ async function inference() {
                 } else
                     document.body.style.backgroundColor = 'rgba(220,220,220, 1)';
 
-
             }
 
     }
@@ -249,37 +254,44 @@ async function inference() {
 
 }
 
-// try tf instead of direct gUM
-// gum();
-
-async function app() {
-    webcam = await tf.data.webcam(video);
-    // Canvas results for displaying masks
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    await tf.setBackend('webgl');
-    model = await faceLandmarksDetection.load(
-        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
-
-    console.log("facemesh loaded");
-    canvas.style.display = "visible";
-    inference().catch(err => console.error(err))
-}
-
-
-/*
+// Load the model when the camera is ready
 video.addEventListener('loadedmetadata', async (event) => {
     // Load the MediaPipe Facemesh package.
-    await tf.setBackend('webgl');
-    model = await faceLandmarksDetection.load(
-        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
 
-    console.log("facemesh loaded");
-    canvas.style.display = "visible";
-    inference().catch(err => console.error(err));
+    try {
+        await tf.setBackend('webgl');
+        model = await faceLandmarksDetection.load(
+            faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
+
+        console.log("facemesh loaded");
+        canvas.style.display = "visible";
+        startBtn.hidden = false;
+
+        inference();
+
+
+    } catch (err) {
+        console.error(err);
+    }
+
 });
- */
+
+
+
+startBtn.addEventListener("click", () => {
+    correctBtn.hidden = false;
+    incorrectBtn.hidden = false;
+
+    instructionText.innerText = "Click on the buttons above and below to train the model";
+
+    document.documentElement.requestFullscreen();
+
+    startBtn.hidden = true;
+
+});
+
+// ToDo: Add save model function
+
 
 
 correctBtn.addEventListener("click", () => {
@@ -304,4 +316,7 @@ incorrectBtn.addEventListener("click", () => {
     }
 });
 
-app();
+
+
+
+getCamera();
