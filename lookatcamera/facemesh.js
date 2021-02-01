@@ -15,6 +15,7 @@ const startBtn = document.getElementById("start");
 const instructionText = document.getElementById("instructions");
 const samplesText = document.getElementById("samples");
 const probabilityText = document.getElementById("probability");
+const hid =  document.getElementById("hid");
 
 
 const canvas = document.querySelector('canvas');
@@ -94,7 +95,7 @@ async function addExample(classId) {
 
             // Pass the intermediate activation to the classifier.
             classifier.addExample(predictions[0].scaledMesh, classId);
-            
+
             // Add some time between images so there is more variance
             setTimeout(() => {
                 //console.log(`Added image ${x}`);
@@ -192,6 +193,7 @@ async function inference() {
         ]
         */
 
+        // Draw the points
         predictions.forEach(prediction => {
             const keypoints = prediction.scaledMesh;
 
@@ -240,10 +242,17 @@ async function inference() {
 
 
                 if (result.confidences[result.label] > 0.7) {
-                    if (result.label === "correct")
+                    if (result.label === "correct"){
                         document.body.style.backgroundColor = 'rgba(0,220,0, 0.5)';
-                    if (result.label === "incorrect")
+                        if(hid.checked)
+                            glow([0,220,0])
+
+                    }
+                    if (result.label === "incorrect"){
                         document.body.style.backgroundColor = 'rgba(220,0,0, 0.5)';
+                        if(hid.checked)
+                            glow([220,0,0])
+                    }
                 } else
                     document.body.style.backgroundColor = 'rgba(220,220,220, 1)';
 

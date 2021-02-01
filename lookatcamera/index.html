@@ -12,18 +12,21 @@
     <!-- You must explicitly require a TF.js backend if you're not using the tfjs union bundle. -->
     <script src="https://unpkg.com/@tensorflow/tfjs-backend-webgl@2.4.0/dist/tf-backend-webgl.js"></script>
     <!--script src="https://unpkg.com/@tensorflow/tfjs-backend-wasm@2.4.0/dist/tf-backend-wasm.js"></script-->
+    <!--script src="https://unpkg.com/@tensorflow/tfjs-backend-wasm@2.4.0/dist/tf-backend-cpu.js"></script-->
 
     <!-- Require face-landmarks-detection itself. -->
     <script src="https://unpkg.com/@tensorflow-models/face-landmarks-detection@0.0.1/dist/face-landmarks-detection.js"></script>
     <!-- KNN classifier -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
 
-    <link rel="stylesheet" type="text/css" href="facemesh.css"/>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+
+    <!--script src="statusLight.js"></script-->
 
 </head>
 <body>
 <div id="controls">
-    <button id="correct" hidden>Look Here</button>
+    <button id="correct" hidden>Correct Place to Look</button>
 </div>
 <div>
     <video autoplay muted playsinline hidden></video>
@@ -32,14 +35,18 @@
 <div>
     <span id="instructions">Wait a moment while facemesh loads</span>
     <button id="start" hidden>Start</button>
+    <br/>
+    <input type="checkbox" id="hid" name="hid" >
+    <label for="hid">Status light indicator</label>
+    <br/>
     <span id="samples">Samples: 0</span>
     <br/>
     <span id="probability">Collect samples to calculate</span>
 </div>
 <div class="bottom">
-    <button id="incorrect" hidden>Don't Look Here</button>
+    <button id="incorrect" hidden>Incorrect place to look</button>
 </div>
-<!--script src="triangulation.js"></script-->
+<script src="embrava.js"></script>
 <script src="facemesh.js"></script>
 </body>
 </html>
