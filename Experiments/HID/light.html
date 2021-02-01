@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Status light</title>
+</head>
+<body>
+
+
+<button id="startBtn">Start</button>
+
+<label for="lightsList">Choose a light</label>
+<select name="lightsList" id="lightsList">
+</select>
+
+<br/><button id="btnRed" onclick="glow([255,0,0])" disabled>RED</button>
+<br/><button id="btnGreen" onclick="glow([0,255,0])" disabled>GREEN</button>
+<br/><button id="btnBlue" onclick="glow([0,0,255])" disabled>BLUE</button>
+<br/><button id="btnPurple" onclick="glow([255,0,255])" disabled>PURPLE</button>
+<br/><button id="stopBtn" disabled>turn off and disconnect</button>
+
+<script src="statusLight.js"></script>
+
+</body>
+</html>
+
+
