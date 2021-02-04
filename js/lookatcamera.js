@@ -15,7 +15,7 @@ const startBtn = document.getElementById("start");
 const instructionText = document.getElementById("instructions");
 const samplesText = document.getElementById("samples");
 const probabilityText = document.getElementById("probability");
-const hid =  document.getElementById("hid");
+const hid = document.getElementById("hid");
 
 
 const canvas = document.querySelector('canvas');
@@ -24,7 +24,7 @@ const NUM_KEYPOINTS = 468;
 const GREEN = '#32EEDB';
 
 const classifier = knnClassifier.create();
-let model, webcam, samples = 0;
+let model, samples = 0;
 const SAMPLESPERRCLICK = 10;
 const CANVAS_MULTIPLIER = 1;    // ToDo: compute this from the css size?
 
@@ -35,7 +35,7 @@ let showResults = false;
 async function getCamera() {
 
     await navigator.mediaDevices.getUserMedia({video: true})
-        .then( mediaStream=> {
+        .then(mediaStream => {
             video.srcObject = mediaStream;
             video.onloadedmetadata = () => {
                 video.play();
@@ -75,12 +75,9 @@ function drawPath(ctx, points, closePath) {
 
 async function addExample(classId) {
     showResults = false;
-    //const webcam = await tf.data.webcam(video);
 
     try {
         for (let x = 0; x < SAMPLESPERRCLICK; x++) {
-            // Capture an image from the web camera.
-            // const img = await webcam.capture();
 
             const predictions = await model.estimateFaces({
                 input: video,
@@ -127,8 +124,6 @@ async function inference() {
 
     while (showResults) {
 
-        //const img = await webcam.capture();
-
         // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
         // array of detected faces from the MediaPipe graph. If passing in a video
         // stream, a single prediction per frame will be returned.
@@ -139,25 +134,20 @@ async function inference() {
             predictIrises: true
         });
 
-        //img.dispose();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // console.log(predictions);
+        if (predictions.length < 1) {
+            console.log("no face detected");
+            document.body.style.backgroundColor = 'rgba(0,0,220, 0.5)';
+            if (hid.checked)
+                glow([0, 0, 220]);
 
-        /*
-        // only works on first face
-        const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
-
-
-        if (train !== null){
-            console.log(predictions[0].scaledMesh);
-            train = null;
+            // ToDo: this isn't working; it never starts again
+            showResults = false;
+            setTimeout(()=>{inference(); console.log("showing results again")}, 1000);
+            break;
         }
 
-    */
-        if (predictions.length < 1)
-            continue;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         //ctx.globalAlpha = 0.6;
         //ctx.fillStyle = GREEN;
@@ -222,52 +212,59 @@ async function inference() {
         });
 
 
-            //const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
-            const predictionTensor = await tf.tensor(predictions[0].scaledMesh);
+        //const predictionTensor = tf.tensor(predictions[0].scaledMesh, [478,3], 'float32');
+        const predictionTensor = await tf.tensor(predictions[0].scaledMesh);
 
-            //console.log(predictionTensor);
-            // const samples = Object.keys(classifier.getClassExampleCount()).reduce((a, c) => a + c,0);
-            if (samples > 0) {
-                const result = await classifier.predictClass(predictionTensor);
-                // console.log("prediction: ", result);
+        //console.log(predictionTensor);
+        // const samples = Object.keys(classifier.getClassExampleCount()).reduce((a, c) => a + c,0);
+        if (samples > 0) {
+            const result = await classifier.predictClass(predictionTensor);
+            // console.log("prediction: ", result);
 
-                const correctProbability = result.confidences["correct"] || 0;
-                const incorrectProbability = result.confidences["incorrect"] || 0;
+            const correctProbability = result.confidences["correct"] || 0;
+            const incorrectProbability = result.confidences["incorrect"] || 0;
 
 
-                probabilityText.innerText = `
+            probabilityText.innerText = `
                 correct: ${correctProbability.toFixed(2) * 100}%\n
                 incorrect: ${incorrectProbability.toFixed(2) * 100}%
                 `;
 
 
-                if (result.confidences[result.label] > 0.7) {
-                    if (result.label === "correct"){
-                        document.body.style.backgroundColor = 'rgba(0,220,0, 0.5)';
-                        if(hid.checked)
-                            glow([0,220,0])
+            if (result.confidences[result.label] > 0.7) {
+                if (result.label === "correct") {
+                    document.body.style.backgroundColor = 'rgba(0,220,0, 0.5)';
+                    if (hid.checked)
+                        glow([0, 220, 0])
 
-                    }
-                    if (result.label === "incorrect"){
-                        document.body.style.backgroundColor = 'rgba(220,0,0, 0.5)';
-                        if(hid.checked)
-                            glow([220,0,0])
-                    }
-                } else
-                    document.body.style.backgroundColor = 'rgba(220,220,220, 1)';
+                }
+                if (result.label === "incorrect") {
+                    document.body.style.backgroundColor = 'rgba(220,0,0, 0.5)';
+                    if (hid.checked)
+                        glow([220, 0, 0])
+                }
+            } else {
+                document.body.style.backgroundColor = 'rgba(220,220,220, 1)';
+                if (hid.checked)
+                    glow([220, 220, 220])
+
 
             }
+
+        }
 
     }
 
 
 }
 
+
 // Load the model when the camera is ready
 video.addEventListener('loadedmetadata', async (event) => {
     // Load the MediaPipe Facemesh package.
 
     try {
+        // console message said to use cpu, not webgl but it take forever to load?
         await tf.setBackend('webgl');
         model = await faceLandmarksDetection.load(
             faceLandmarksDetection.SupportedPackages.mediapipeFacemesh, {maxFaces: 1});
@@ -286,7 +283,6 @@ video.addEventListener('loadedmetadata', async (event) => {
 });
 
 
-
 startBtn.addEventListener("click", () => {
     correctBtn.hidden = false;
     incorrectBtn.hidden = false;
@@ -300,7 +296,6 @@ startBtn.addEventListener("click", () => {
 });
 
 // ToDo: Add save model function
-
 
 
 correctBtn.addEventListener("click", () => {
@@ -324,8 +319,6 @@ incorrectBtn.addEventListener("click", () => {
         console.error(err)
     }
 });
-
-
 
 
 getCamera();
