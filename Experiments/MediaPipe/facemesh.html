@@ -10,9 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <!--script src="https://mrdoob.github.io/stats.js/build/stats.min.js"></script-->
 <style>
-    canvas{
-        border: 1px solid black;
-    }
 </style>
 </head>
 <body>
@@ -23,8 +20,8 @@
     <input type="checkbox" id="show_video" checked/>
     <label for="show_video">Webcam video</label>
     <br>
-    <video class="input_video" autoplay playsinline muted hidden></video>
-    <canvas class="output_canvas"></canvas>
+    <!--canvas id="output_canvas"></canvas-->
+    <video id="output_video" autoplay playsinline muted></video>
     <br>
     <span id="fps"></span>
 </div>

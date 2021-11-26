@@ -1,8 +1,15 @@
-const videoElement = document.getElementsByClassName('input_video')[0];
-const canvasElement = document.getElementsByClassName('output_canvas')[0];
-const canvasCtx = canvasElement.getContext('2d');
+const outputVideoElement = document.querySelector('video#output_video');
+
 const showVidCheckbox = document.querySelector('input#show_video');
 const fpsSpan = document.querySelector('span#fps');
+
+const FRAME_RATE = 30;
+const VIDEO_WIDTH = 640;    // ToDo: fix one of these and adjust based on ratio
+const VIDEO_HEIGHT = 360;
+
+// const canvasElement = document.querySelector('canvas#output_canvas');
+const canvasElement = new OffscreenCanvas(VIDEO_WIDTH, VIDEO_HEIGHT);
+const canvasCtx = canvasElement.getContext('2d');
 
 /*
 // stats setup
@@ -12,42 +19,53 @@ stats.dom.style.position = 'relative';
 stats.dom.style.right = '0px';
  */
 
+async function mesh(frame, controller){
+    // stats setup
+    // senderStats.begin();
 
-function onResults(results) {
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(frame, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
 
-    // Show the video or a colored background
-    if(showVidCheckbox.checked)
-        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-    else{
-        canvasCtx.fillStyle = "aqua";
-        canvasCtx.fillRect(0,0, canvasElement.width, canvasElement.height);
-    }
+    await faceMesh.onResults(async results => {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // how to draw the mesh
-    if (results.multiFaceLandmarks) {
-        const THIN_LINE = 1;
-        const THICK_LINE = 2;
-
-        const GREY_CONNECTOR = {color: '#C0C0C070', lineWidth: THIN_LINE};
-        const WHITE_CONNECTOR = {color: '#E0E0E0', lineWidth: THIN_LINE};
-        const RED_CONNECTOR = {color: '#FF3030', lineWidth: THIN_LINE};
-        const GREEN_CONNECTOR = {color: '#30FF30', lineWidth: THIN_LINE};
-
-        for (const landmarks of results.multiFaceLandmarks) {
-            drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, GREY_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, WHITE_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, WHITE_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, RED_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, WHITE_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, WHITE_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_IRIS, RED_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, WHITE_CONNECTOR);
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, WHITE_CONNECTOR);
+        // Show the video or a colored background
+        if(showVidCheckbox.checked)
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+        else{
+            canvasCtx.fillStyle = "aqua";
+            canvasCtx.fillRect(0,0, canvasElement.width, canvasElement.height);
         }
-    }
-    canvasCtx.restore();
+
+        // how to draw the mesh
+        if (results.multiFaceLandmarks) {
+            const THIN_LINE = 1;
+            const THICK_LINE = 2;
+
+            const GREY_CONNECTOR = {color: '#C0C0C070', lineWidth: THIN_LINE};
+            const WHITE_CONNECTOR = {color: '#E0E0E0', lineWidth: THIN_LINE};
+            const RED_CONNECTOR = {color: '#FF3030', lineWidth: THIN_LINE};
+            const GREEN_CONNECTOR = {color: '#30FF30', lineWidth: THIN_LINE};
+
+            for (const landmarks of results.multiFaceLandmarks) {
+                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, GREY_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, WHITE_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, WHITE_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, RED_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, WHITE_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, WHITE_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_IRIS, RED_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, WHITE_CONNECTOR);
+                drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, WHITE_CONNECTOR);
+            }
+        }
+        canvasCtx.restore();
+
+        const meshFrame= new VideoFrame(canvasElement);
+        controller.enqueue(meshFrame);
+        frame.close();
+    });
+    await faceMesh.send({image: canvasElement})
 }
 
 const faceMesh = new FaceMesh({
@@ -61,7 +79,7 @@ faceMesh.setOptions({
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
-faceMesh.onResults(onResults);
+//faceMesh.onResults(onResults);
 
 /*
 const camera = new Camera(videoElement, {
@@ -74,23 +92,13 @@ const camera = new Camera(videoElement, {
 camera.start();
 */
 
-
-const FRAME_RATE = 30;
-
-let videoWidth = 640;
-let videoHeight = 360;
-
 const deviceSelect = document.querySelector('select#devices');
 
 async function getVideo() {
-    console.log(`Getting ${videoWidth}x${videoHeight} video`);
 
-    /*
-    document.querySelectorAll('video').forEach(element => {
-        element.height = videoHeight;
-        element.width = videoWidth;
-    });
-     */
+    // clean up resources if switching sources
+    if (window.stream)
+        window.stream.getTracks().forEach(track => track.stop());
 
     let videoSource = videoDevices[deviceSelect.selectedIndex || 0]?.deviceId;
 
@@ -98,13 +106,29 @@ async function getVideo() {
         {
             video:
                 {
-                    height: {exact: videoHeight}, width: {exact: videoWidth}, frameRate: FRAME_RATE,
+                    height: {exact: VIDEO_HEIGHT}, width: {exact: VIDEO_WIDTH}, frameRate: FRAME_RATE,
                     deviceId: videoSource ? {exact: videoSource} : undefined
                 }
         });
-    videoElement.srcObject = stream;
-    videoElement.play();
-    console.log(`Capture camera with device ${stream.getTracks()[0].label}`);
+
+    window.stream = stream;
+
+    const settings = stream.getVideoTracks()[0].getSettings();
+    console.log(`Capture camera with device ${stream.getVideoTracks()[0].label} at ${settings.width}x${settings.height}`);
+
+
+    // Insertable streams
+    const [track] = stream.getVideoTracks();
+    const processor = new MediaStreamTrackProcessor({track});
+
+    const generator = new MediaStreamTrackGenerator({kind: 'video'});
+    const outputStream = new MediaStream([generator]);
+    outputVideoElement.srcObject = outputStream;
+
+    await processor.readable.pipeThrough(new TransformStream({
+        transform: (frame, controller) => mesh(frame, controller)
+    })).pipeTo(generator.writable);
+
 }
 
 let videoDevices = [];
@@ -120,20 +144,21 @@ async function getDevices(){
 }
 
 async function start(){
-    canvasElement.height = videoHeight;
-    canvasElement.width = videoWidth;
+    canvasElement.height = VIDEO_HEIGHT;
+    canvasElement.width = VIDEO_WIDTH;
 
     // create a stream and send it to replace when its starts playing
-    videoElement.onplaying = async ()=> {
+    /*
+    inputVideoElement.onplaying = async ()=> {
 
         let lastTime = new Date();
 
         async function getFrames() {
-            const now = videoElement.currentTime;
+            const now = inputVideoElement.currentTime;
             if (now > lastTime){
                 const fps = (1/(now-lastTime)).toFixed();
                 fpsSpan.textContent = `${fps} fps`;
-                await faceMesh.send({image: videoElement})
+                await faceMesh.send({image: inputVideoElement})
             }
             lastTime = now;
             // stats.update();
@@ -144,6 +169,7 @@ async function start(){
 
         // await faceMesh.send({image: videoElement})
     };
+     */
 
     // Note: list of devices may change after first camera permission approval
     await getDevices();
