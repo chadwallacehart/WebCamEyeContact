@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-    <!--script src="https://mrdoob.github.io/stats.js/build/stats.min.js"></script-->
+    <script src="https://mrdoob.github.io/stats.js/build/stats.min.js"></script>
 <style>
 </style>
 </head>
@@ -23,7 +23,11 @@
     <!--canvas id="output_canvas"></canvas-->
     <video id="output_video" autoplay playsinline muted></video>
     <br>
-    <span id="fps"></span>
+    <button id="pop_out" disabled>Pop-out</button>
+    <br>
+    <div id="stats">
+        <span id="fps"></span>
+    </div>
 </div>
 <script type="module" src="facemesh.mjs"></script>
 </body>

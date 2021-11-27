@@ -1,27 +1,27 @@
 const outputVideoElement = document.querySelector('video#output_video');
+const popOutBtn = document.querySelector('button#pop_out');
 
 const showVidCheckbox = document.querySelector('input#show_video');
 const fpsSpan = document.querySelector('span#fps');
 
-const FRAME_RATE = 30;
+const FRAME_RATE = 15;
 const VIDEO_WIDTH = 640;    // ToDo: fix one of these and adjust based on ratio
 const VIDEO_HEIGHT = 360;
+const PIXEL_RATIO = 16 / 9;
 
 // const canvasElement = document.querySelector('canvas#output_canvas');
 const canvasElement = new OffscreenCanvas(VIDEO_WIDTH, VIDEO_HEIGHT);
 const canvasCtx = canvasElement.getContext('2d');
 
-/*
 // stats setup
 const stats = new Stats();
-document.querySelector('div.container').appendChild(stats.dom);
+document.querySelector('#stats').appendChild(stats.dom);
 stats.dom.style.position = 'relative';
-stats.dom.style.right = '0px';
- */
+stats.dom.style.right = '600px';
 
-async function mesh(frame, controller){
+async function mesh(frame, controller) {
     // stats setup
-    // senderStats.begin();
+    stats.begin();
 
     canvasCtx.drawImage(frame, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
 
@@ -30,11 +30,11 @@ async function mesh(frame, controller){
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
         // Show the video or a colored background
-        if(showVidCheckbox.checked)
+        if (showVidCheckbox.checked)
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-        else{
+        else {
             canvasCtx.fillStyle = "aqua";
-            canvasCtx.fillRect(0,0, canvasElement.width, canvasElement.height);
+            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
         }
 
         // how to draw the mesh
@@ -61,9 +61,11 @@ async function mesh(frame, controller){
         }
         canvasCtx.restore();
 
-        const meshFrame= new VideoFrame(canvasElement);
+        const meshFrame = new VideoFrame(canvasElement);
         controller.enqueue(meshFrame);
         frame.close();
+
+        stats.end();
     });
     await faceMesh.send({image: canvasElement})
 }
@@ -132,50 +134,124 @@ async function getVideo() {
 }
 
 let videoDevices = [];
-async function getDevices(){
+
+async function getDevices() {
     let devices = await navigator.mediaDevices.enumerateDevices();
-    videoDevices = devices.filter(device=>device.kind==='videoinput');
+    videoDevices = devices.filter(device => device.kind === 'videoinput');
     console.log("video devices:", videoDevices);
-    videoDevices.forEach(device=>{
+    videoDevices.forEach(device => {
         const option = document.createElement('option');
         option.text = device.label;
         deviceSelect.appendChild(option);
     });
 }
 
-async function start(){
+async function start() {
     canvasElement.height = VIDEO_HEIGHT;
     canvasElement.width = VIDEO_WIDTH;
 
     // create a stream and send it to replace when its starts playing
-    /*
-    inputVideoElement.onplaying = async ()=> {
-
-        let lastTime = new Date();
-
-        async function getFrames() {
-            const now = inputVideoElement.currentTime;
-            if (now > lastTime){
-                const fps = (1/(now-lastTime)).toFixed();
-                fpsSpan.textContent = `${fps} fps`;
-                await faceMesh.send({image: inputVideoElement})
-            }
-            lastTime = now;
-            // stats.update();
-            requestAnimationFrame(getFrames);
-        }
-
-        await getFrames();
-
-        // await faceMesh.send({image: videoElement})
-    };
-     */
+    outputVideoElement.onplaying = () =>
+        popOutBtn.disabled = false;
 
     // Note: list of devices may change after first camera permission approval
-    await getDevices();
     await getVideo();
 }
 
+popOutBtn.onclick = async () => {
+    const PIP_HEIGHT = 180;
+    let pip = await outputVideoElement.requestPictureInPicture();
+    console.log(`Picture-in-Picture size: ${pip.width}x${pip.height}`);
+    window.pip = pip;
+    popOutBtn.disabled = true;
+}
 
+outputVideoElement.onleavepictureinpicture = () => {
+    // Video element left Picture-In-Picture mode.
+    console.log("PIP closed");
+    popOutBtn.disabled = false;
+};
+
+
+if ('mediaSession' in navigator) {
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'WebCamEyeContact',
+        artist: "Cogint Labs",
+        album: 'Cogint Labs Greatest Hits',
+        artwork: [
+            {src: 'https://dummyimage.com/96x96', sizes: '96x96', type: 'image/png'},
+            {src: 'https://dummyimage.com/128x128', sizes: '128x128', type: 'image/png'},
+            {src: 'https://dummyimage.com/192x192', sizes: '192x192', type: 'image/png'},
+            {src: 'https://dummyimage.com/256x256', sizes: '256x256', type: 'image/png'},
+            {src: 'https://dummyimage.com/384x384', sizes: '384x384', type: 'image/png'},
+            {src: 'https://dummyimage.com/512x512', sizes: '512x512', type: 'image/png'},
+        ]
+    });
+
+    /*
+    navigator.mediaSession.setActionHandler('play', ()=>console.log("play"));
+    navigator.mediaSession.setActionHandler('pause', ()=>console.log("pause"));
+    navigator.mediaSession.setActionHandler('seekbackward', ()=>console.log("seek back"));
+    navigator.mediaSession.setActionHandler('seekforward', ()=>console.log("seek forward"));
+    navigator.mediaSession.setActionHandler('seekto', ()=>console.log("seek forward"));
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>console.log("previous track"));
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>console.log("next track"));
+    navigator.mediaSession.setCameraActive(true);
+    navigator.mediaSession.setMicrophoneActive(true);
+
+     */
+
+    //     https://web.dev/media-session/
+    const actionHandlers = [
+        // ['play',          () => console.log("play") ],
+        // ['pause',         () => console.log("pause") ],
+        ['previoustrack', () => console.log("previous track")],
+        ['nexttrack',     () => console.log("next track")],
+        // ['stop',          () => console.log("stop") ],
+        // ['seekbackward',  (details) => { /* ... */ }],
+        // ['seekforward',   (details) => { /* ... */ }],
+        // ['seekto',        (details) => { /* ... */ }],
+        // ['togglemicrophone', () => { /* ... */ }],
+        ['togglecamera',     () => {
+            showVidCheckbox.checked = !showVidCheckbox.checked;
+            navigator.mediaSession.setCameraActive(showVidCheckbox.checked);
+        }],
+        // ['hangup',           () => { /* ... */ }],
+    ];
+
+    for (const [action, handler] of actionHandlers) {
+        try {
+            navigator.mediaSession.setActionHandler(action, handler);
+        } catch (error) {
+            console.log(`The media session action "${action}" is not supported yet.`);
+        }
+    }
+
+    /*
+    //  https://developer.mozilla.org/en-US/docs/Web/API/MediaSession#examples
+    [
+        'play',
+        'pause',
+        'seekbackward',
+        'seekforward',
+        'seekto',
+        'previoustrack',
+        'nexttrack',
+        'skipad',
+        'togglemicrophone',
+        'togglecamera',
+        // 'hangup'
+    ]
+        .forEach(action => navigator.mediaSession.setActionHandler(action, () => console.log(`mediaSession.setActionHandler event: ${action}`))
+        );
+
+     */
+
+}
+
+
+await getDevices();
 deviceSelect.onchange = getVideo;
-start().catch(err=>console.error(err));
+start().catch(err => console.error(err));
+//startBtn.onclick = async ()=> (await start()).catch(err=>console.error(err));
