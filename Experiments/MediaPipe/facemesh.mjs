@@ -5,9 +5,9 @@ const showVidCheckbox = document.querySelector('input#show_video');
 const fpsSpan = document.querySelector('span#fps');
 
 const FRAME_RATE = 15;
-const VIDEO_WIDTH = 640;    // ToDo: fix one of these and adjust based on ratio
-const VIDEO_HEIGHT = 360;
+const VIDEO_HEIGHT = 180;
 const PIXEL_RATIO = 16 / 9;
+const VIDEO_WIDTH = VIDEO_HEIGHT * PIXEL_RATIO;
 
 // const canvasElement = document.querySelector('canvas#output_canvas');
 const canvasElement = new OffscreenCanvas(VIDEO_WIDTH, VIDEO_HEIGHT);
@@ -124,8 +124,7 @@ async function getVideo() {
     const processor = new MediaStreamTrackProcessor({track});
 
     const generator = new MediaStreamTrackGenerator({kind: 'video'});
-    const outputStream = new MediaStream([generator]);
-    outputVideoElement.srcObject = outputStream;
+    outputVideoElement.srcObject = new MediaStream([generator]);
 
     await processor.readable.pipeThrough(new TransformStream({
         transform: (frame, controller) => mesh(frame, controller)
@@ -249,7 +248,6 @@ if ('mediaSession' in navigator) {
      */
 
 }
-
 
 await getDevices();
 deviceSelect.onchange = getVideo;
