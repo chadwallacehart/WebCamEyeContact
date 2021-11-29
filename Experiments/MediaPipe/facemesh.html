@@ -10,23 +10,50 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://mrdoob.github.io/stats.js/build/stats.min.js"></script>
 <style>
+    table {
+        border: 1px lightgray;
+    }
+    video.self_view{
+        transform: scale(-1,1);
+    }
 </style>
 </head>
 <body>
 <div class="container">
+    <div id="stats"></div>
     <label for="devices">Choose your camera</label>
     <select name="devices" id="devices"></select>
     <br>
-    <input type="checkbox" id="show_video" checked/>
-    <label for="show_video">Webcam video</label>
+    <label for="flip_video">Flip self-view video: </label>
+    <input type="checkbox" id="flip_video" checked/>
     <br>
-    <!--canvas id="output_canvas"></canvas-->
-    <video id="output_video" autoplay playsinline muted></video>
+    <label for="show_video">Show self-view video: </label>
+    <input type="checkbox" id="show_video"/>
     <br>
-    <button id="pop_out" disabled>Pop-out</button>
+    <label for="show_screen_share">Show screen share: </label>
+    <input type="checkbox" id="show_screen_share"/>
+
     <br>
-    <div id="stats">
-        <span id="fps"></span>
+    <video class="output_video" autoplay playsinline muted controls></video>
+    <br>
+    <button class="pop_out" disabled>Pop-out</button>
+    <div>
+        <h3>Video feeds</h3>
+        <table>
+            <tr>
+                <th>Self-view</th>
+                <th>Screen-share</th>
+            </tr>
+            <tr>
+                <td>
+                    <video class="self_view" autoplay playsinline muted></video>
+                </td>
+                <td>
+                    <video class="screen_share" autoplay playsinline muted></video>
+                    <button class="screen_share" style="height:100%;width:100%">Share screen</button>
+                </td>
+            </tr>
+        </table>
     </div>
 </div>
 <script type="module" src="facemesh.mjs"></script>
